@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <JuceHeader.h>
@@ -56,22 +48,25 @@ private:
   using MonoFilter = juce::dsp::IIR::Filter<float>;
   using FilterCoeffs = juce::dsp::IIR::Coefficients<float>;
   using StereoFilter = juce::dsp::ProcessorDuplicator<MonoFilter, FilterCoeffs>;
-  using FilterChain = juce::dsp::ProcessorChain<StereoFilter, StereoFilter>;
+  using FilterChain = juce::dsp::ProcessorChain<StereoFilter, StereoFilter, StereoFilter, StereoFilter>;
 
   FilterChain filter;
+  juce::AudioBuffer<float> dryBuffer;
+  float lastCutoff = -1.f;
 
-  juce::AudioParameterFloat* filterParam = nullptr;
+  juce::AudioParameterFloat* filterParam{nullptr};
+  juce::AudioParameterChoice* distFilterParam{nullptr};
   
-//  juce::AudioParameterChoice* typeParam = nullptr;
-//  juce::AudioParameterFloat *mixParam{nullptr};
-//  juce::AudioParameterFloat *driveParam{nullptr};
-//  
-//  static inline float fastTanh(float value)
-//  {
-//    value = std::clamp(value, -5.f, 5.f);
-//    const float v2 = value * value;
-//    return value * (945.f + v2 * (105.f + v2)) / (945.f + v2 * (420.f + v2 * 15.f));
-//  }
-  //==============================================================================
+  juce::AudioParameterChoice* typeParam{nullptr};
+  juce::AudioParameterFloat *mixParam{nullptr};
+  juce::AudioParameterFloat *driveParam{nullptr};
+  
+  static inline float fastTanh(float value)
+  {
+    value = std::clamp(value, -5.f, 5.f);
+    const float v2 = value * value;
+    return value * (945.f + v2 * (105.f + v2)) / (945.f + v2 * (420.f + v2 * 15.f));
+  }
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SkuxAudioProcessor)
 };
