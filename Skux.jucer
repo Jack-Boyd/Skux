@@ -5,6 +5,10 @@
               cppLanguageStandard="20">
   <MAINGROUP id="CFMcdA" name="Skux">
     <GROUP id="{20CF9524-ACCA-0C41-083F-1B74784D86CF}" name="Source">
+      <FILE id="IHZ8xT" name="Distortion.cpp" compile="1" resource="0" file="Source/Distortion.cpp"/>
+      <FILE id="QM7haO" name="Distortion.h" compile="0" resource="0" file="Source/Distortion.h"/>
+      <FILE id="uSctI8" name="Filter.cpp" compile="1" resource="0" file="Source/Filter.cpp"/>
+      <FILE id="nW9rV3" name="Filter.h" compile="0" resource="0" file="Source/Filter.h"/>
       <FILE id="uJ8Ggb" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="IvA8oK" name="PluginProcessor.h" compile="0" resource="0"

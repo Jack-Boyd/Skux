@@ -1,9 +1,8 @@
 #pragma once
 
 #include <JuceHeader.h>
-
-using Filter = juce::dsp::IIR::Filter<float>;
-using Coefficients = Filter::CoefficientsPtr;
+#include "Filter.h"
+#include "Distortion.h"
 
 class SkuxAudioProcessor  : public juce::AudioProcessor
 {
@@ -45,30 +44,16 @@ public:
   APVTS apvts{*this, nullptr, "Parameters", createParameterLayout()};
 
 private:
-  using MonoFilter = juce::dsp::IIR::Filter<float>;
-  using FilterState = juce::dsp::IIR::Coefficients<float>;
-  using StereoFilter = juce::dsp::ProcessorDuplicator<MonoFilter, FilterState>;
-  using FilterChain = juce::dsp::ProcessorChain<StereoFilter, StereoFilter>;
-
-  FilterChain m_filter;
-  juce::AudioBuffer<float> m_filterMixBuffer;
-
+  Filter m_filterProcessor;
+  Distortion m_distortionProcessor;
+  
   juce::AudioParameterFloat *m_distDriveParam{nullptr};
   juce::AudioParameterFloat *m_distMixParam{nullptr};
   juce::AudioParameterChoice* m_distTypeParam{nullptr};
   
   juce::AudioParameterFloat* m_distFilterCutoffParam{nullptr};
-  float m_lastDistFilterCutoff = -1.f;
   juce::AudioParameterChoice* m_distFilterRoutingParam{nullptr};
   juce::AudioParameterFloat* m_distFilterQParam{nullptr};
-  float m_lastDistFilterQ = -1.f;
   
-  static inline float fastTanh(float value)
-  {
-    value = std::clamp(value, -5.f, 5.f);
-    const float v2 = value * value;
-    return value * (945.f + v2 * (105.f + v2)) / (945.f + v2 * (420.f + v2 * 15.f));
-  }
-
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SkuxAudioProcessor)
 };

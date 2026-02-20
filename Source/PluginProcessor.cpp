@@ -89,17 +89,19 @@ void SkuxAudioProcessor::changeProgramName (int index, const juce::String& newNa
 
 void SkuxAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-  m_filterMixBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
-  
   juce::dsp::ProcessSpec spec;
-  spec.maximumBlockSize = samplesPerBlock;
-  spec.numChannels = getTotalNumOutputChannels();
   spec.sampleRate = sampleRate;
+  spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+  spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
 
-  m_filter.prepare(spec);
+  m_filterProcessor.prepare(spec);
 }
 
-void SkuxAudioProcessor::releaseResources() {}
+void SkuxAudioProcessor::releaseResources()
+{
+    m_filterProcessor.reset();
+}
+
 
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool SkuxAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -132,7 +134,6 @@ void SkuxAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
   juce::ScopedNoDenormals noDenormals;
   const auto totalNumInputChannels  = getTotalNumInputChannels();
   const auto totalNumOutputChannels = getTotalNumOutputChannels();
-  const auto numSamples = buffer.getNumSamples();
 
   const auto distMix = m_distMixParam->get();
   const auto distDrive = m_distDriveParam->get();
@@ -141,72 +142,16 @@ void SkuxAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
   const auto distFilterRouting = m_distFilterRoutingParam->getIndex();
   const auto distFilterQ = m_distFilterQParam->get();
   
-  if (distFilterCutoff != m_lastDistFilterCutoff || distFilterQ != m_lastDistFilterQ) {
-    *m_filter.get<0>().state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
-        getSampleRate(), distFilterCutoff, distFilterQ);
-    *m_filter.get<1>().state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
-        getSampleRate(), distFilterCutoff, 0.707f);
-
-    m_lastDistFilterCutoff = distFilterCutoff;
-    m_lastDistFilterQ = distFilterQ;
-  }
-
-  juce::dsp::AudioBlock<float> block(buffer);
-  juce::dsp::ProcessContextReplacing<float> context(block);
-  
-  auto applyFilterWithMix = [&]() {
-    if (distMix >= 1.f) {
-      m_filter.process(context);
-    }
-    else {
-      for (int ch = 0; ch < totalNumInputChannels; ++ch) {
-        m_filterMixBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
-      }
-      
-      m_filter.process(context);
-
-      for (int ch = 0; ch < totalNumInputChannels; ++ch) {
-        auto* wet = buffer.getWritePointer(ch);
-        const auto* dry = m_filterMixBuffer.getReadPointer(ch);
-
-        for (int s = 0; s < numSamples; ++s) {
-          wet[s] = wet[s] * distMix + dry[s] * (1.f - distMix);
-        }
-      }
-    }
-  };
-  
-  
   if (distFilterRouting == 1)
-    applyFilterWithMix();
-  
-  if (distMix > 0.f) {
-    const auto dryGain = 1.f - distMix;
-    const auto wetGain = (distType == 0) ? distMix / std::pow(distDrive, 0.45f) : distMix / std::pow(distDrive, 0.6f);
-    
-    for (int channel = 0; channel < totalNumInputChannels; ++channel) {
-      auto* channelData = buffer.getWritePointer(channel);
-      
-      if (distType == 0) {
-        for (int s = 0; s < numSamples; ++s) {
-          const auto drySample = channelData[s];
-          channelData[s] = drySample * dryGain + fastTanh(drySample * distDrive) * wetGain;
-        }
-      }
-      else {
-        for (int s = 0; s < numSamples; ++s) {
-          const auto drySample = channelData[s];
-          channelData[s] = drySample * dryGain + std::clamp(drySample * distDrive, -1.f, 1.f) * wetGain;
-        }
-      }
-    }
-  }
-  
+    m_filterProcessor.process(buffer, distFilterCutoff, distFilterQ, distMix);
+
+  m_distortionProcessor.process(buffer, distDrive, distMix, distType);
+
   if (distFilterRouting == 2)
-    applyFilterWithMix();
-  
+    m_filterProcessor.process(buffer, distFilterCutoff, distFilterQ, distMix);
+
   for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i) {
-    buffer.clear(i, 0, numSamples);
+      buffer.clear(i, 0, buffer.getNumSamples());
   }
 }
 
@@ -247,7 +192,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SkuxAudioProcessor::createPa
   layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Filter Cutoff", 1),
                                                          "Filter Cutoff",
                                                          juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
-                                                         20.f));
+                                                         20000.f));
   layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("Filter Routing", 1),
                                                           "Filter Routing",
                                                           juce::StringArray { "Off", "Pre", "Post" },
