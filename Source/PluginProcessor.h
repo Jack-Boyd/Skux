@@ -46,20 +46,22 @@ public:
 
 private:
   using MonoFilter = juce::dsp::IIR::Filter<float>;
-  using FilterCoeffs = juce::dsp::IIR::Coefficients<float>;
-  using StereoFilter = juce::dsp::ProcessorDuplicator<MonoFilter, FilterCoeffs>;
-  using FilterChain = juce::dsp::ProcessorChain<StereoFilter, StereoFilter, StereoFilter, StereoFilter>;
+  using FilterState = juce::dsp::IIR::Coefficients<float>;
+  using StereoFilter = juce::dsp::ProcessorDuplicator<MonoFilter, FilterState>;
+  using FilterChain = juce::dsp::ProcessorChain<StereoFilter, StereoFilter>;
 
-  FilterChain filter;
-  juce::AudioBuffer<float> dryBuffer;
-  float lastCutoff = -1.f;
+  FilterChain m_filter;
+  juce::AudioBuffer<float> m_filterMixBuffer;
 
-  juce::AudioParameterFloat* filterParam{nullptr};
-  juce::AudioParameterChoice* distFilterParam{nullptr};
+  juce::AudioParameterFloat *m_distDriveParam{nullptr};
+  juce::AudioParameterFloat *m_distMixParam{nullptr};
+  juce::AudioParameterChoice* m_distTypeParam{nullptr};
   
-  juce::AudioParameterChoice* typeParam{nullptr};
-  juce::AudioParameterFloat *mixParam{nullptr};
-  juce::AudioParameterFloat *driveParam{nullptr};
+  juce::AudioParameterFloat* m_distFilterCutoffParam{nullptr};
+  float m_lastDistFilterCutoff = -1.f;
+  juce::AudioParameterChoice* m_distFilterRoutingParam{nullptr};
+  juce::AudioParameterFloat* m_distFilterQParam{nullptr};
+  float m_lastDistFilterQ = -1.f;
   
   static inline float fastTanh(float value)
   {

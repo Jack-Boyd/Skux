@@ -13,17 +13,20 @@ SkuxAudioProcessor::SkuxAudioProcessor()
                        )
 #endif
 {
-  typeParam = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("Distortion Type"));
-  driveParam = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("Distortion Drive"));
-  mixParam = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("Distortion Mix"));
-  filterParam = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("Filter Value"));
-  distFilterParam = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("Distortion Filter"));
-
-  jassert(typeParam != nullptr);
-  jassert(driveParam != nullptr);
-  jassert(mixParam != nullptr);
-  jassert(filterParam != nullptr);
-  jassert(distFilterParam != nullptr);
+  m_distDriveParam = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("Drive"));
+  m_distMixParam = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("Mix"));
+  m_distTypeParam = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("Type"));
+  
+  m_distFilterCutoffParam = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("Filter Cutoff"));
+  m_distFilterRoutingParam = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("Filter Routing"));
+  m_distFilterQParam = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("Filter Q"));
+  
+  jassert(m_distDriveParam != nullptr);
+  jassert(m_distMixParam != nullptr);
+  jassert(m_distTypeParam != nullptr);
+  jassert(m_distFilterCutoffParam != nullptr);
+  jassert(m_distFilterRoutingParam != nullptr);
+  jassert(m_distFilterQParam != nullptr);
 }
 
 SkuxAudioProcessor::~SkuxAudioProcessor() {}
@@ -86,14 +89,14 @@ void SkuxAudioProcessor::changeProgramName (int index, const juce::String& newNa
 
 void SkuxAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-  dryBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
+  m_filterMixBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
   
   juce::dsp::ProcessSpec spec;
   spec.maximumBlockSize = samplesPerBlock;
   spec.numChannels = getTotalNumOutputChannels();
   spec.sampleRate = sampleRate;
 
-  filter.prepare(spec);
+  m_filter.prepare(spec);
 }
 
 void SkuxAudioProcessor::releaseResources() {}
@@ -131,74 +134,75 @@ void SkuxAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
   const auto totalNumOutputChannels = getTotalNumOutputChannels();
   const auto numSamples = buffer.getNumSamples();
 
-  const auto mix = mixParam->get();
-  const auto drive = driveParam->get();
-  const auto cutoff = filterParam->get();
-  const auto distFilter = distFilterParam->getIndex();
-  const auto clipType = typeParam->getIndex();
+  const auto distMix = m_distMixParam->get();
+  const auto distDrive = m_distDriveParam->get();
+  const auto distType = m_distTypeParam->getIndex();
+  const auto distFilterCutoff = m_distFilterCutoffParam->get();
+  const auto distFilterRouting = m_distFilterRoutingParam->getIndex();
+  const auto distFilterQ = m_distFilterQParam->get();
+  
+  if (distFilterCutoff != m_lastDistFilterCutoff || distFilterQ != m_lastDistFilterQ) {
+    *m_filter.get<0>().state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
+        getSampleRate(), distFilterCutoff, distFilterQ);
+    *m_filter.get<1>().state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
+        getSampleRate(), distFilterCutoff, 0.707f);
 
-  if (cutoff != lastCutoff) {
-    auto coefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(cutoff, getSampleRate(), 8.f);
-
-    if (coefficients.size() >= 4) {
-      *filter.get<0>().state = *coefficients[0];
-      *filter.get<1>().state = *coefficients[1];
-      *filter.get<2>().state = *coefficients[2];
-      *filter.get<3>().state = *coefficients[3];
-    }
-    
-    lastCutoff = cutoff;
+    m_lastDistFilterCutoff = distFilterCutoff;
+    m_lastDistFilterQ = distFilterQ;
   }
 
   juce::dsp::AudioBlock<float> block(buffer);
   juce::dsp::ProcessContextReplacing<float> context(block);
   
   auto applyFilterWithMix = [&]() {
-    if (mix >= 1.f) {
-      filter.process(context);
+    if (distMix >= 1.f) {
+      m_filter.process(context);
     }
     else {
-      for (int ch = 0; ch < totalNumInputChannels; ++ch)
-        dryBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
+      for (int ch = 0; ch < totalNumInputChannels; ++ch) {
+        m_filterMixBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
+      }
       
-      filter.process(context);
+      m_filter.process(context);
 
       for (int ch = 0; ch < totalNumInputChannels; ++ch) {
         auto* wet = buffer.getWritePointer(ch);
-        const auto* dry = dryBuffer.getReadPointer(ch);
+        const auto* dry = m_filterMixBuffer.getReadPointer(ch);
 
-        for (int s = 0; s < numSamples; ++s)
-          wet[s] = wet[s] * mix + dry[s] * (1.f - mix);
+        for (int s = 0; s < numSamples; ++s) {
+          wet[s] = wet[s] * distMix + dry[s] * (1.f - distMix);
+        }
       }
     }
   };
   
   
-  if (distFilter == 1)
+  if (distFilterRouting == 1)
     applyFilterWithMix();
   
-  if (mix > 0.f) {
-    const auto dryGain = 1.f - mix;
-    const auto wetGain = (clipType == 0) ? mix / std::pow(drive, 0.45f) : mix / std::pow(drive, 0.6f);
+  if (distMix > 0.f) {
+    const auto dryGain = 1.f - distMix;
+    const auto wetGain = (distType == 0) ? distMix / std::pow(distDrive, 0.45f) : distMix / std::pow(distDrive, 0.6f);
     
     for (int channel = 0; channel < totalNumInputChannels; ++channel) {
       auto* channelData = buffer.getWritePointer(channel);
       
-      if (clipType == 0) {
+      if (distType == 0) {
         for (int s = 0; s < numSamples; ++s) {
           const auto drySample = channelData[s];
-          channelData[s] = drySample * dryGain + fastTanh(drySample * drive) * wetGain;
+          channelData[s] = drySample * dryGain + fastTanh(drySample * distDrive) * wetGain;
         }
       }
       else {
         for (int s = 0; s < numSamples; ++s) {
           const auto drySample = channelData[s];
-          channelData[s] = drySample * dryGain + std::clamp(drySample * drive, -1.f, 1.f) * wetGain;
+          channelData[s] = drySample * dryGain + std::clamp(drySample * distDrive, -1.f, 1.f) * wetGain;
         }
       }
     }
   }
-  if (distFilter == 2)
+  
+  if (distFilterRouting == 2)
     applyFilterWithMix();
   
   for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i) {
@@ -240,26 +244,30 @@ juce::AudioProcessorValueTreeState::ParameterLayout SkuxAudioProcessor::createPa
 {
   APVTS::ParameterLayout layout;
   
-  layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Filter Value", 1),
-                                                         "Filter Value",
+  layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Filter Cutoff", 1),
+                                                         "Filter Cutoff",
                                                          juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
                                                          20.f));
-  layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("Distortion Filter", 1),
-                                                          "Distortion Filter",
+  layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("Filter Routing", 1),
+                                                          "Filter Routing",
                                                           juce::StringArray { "Off", "Pre", "Post" },
                                                           0));
-  layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("Distortion Type", 1),
-                                                          "Distortion Type",
+  layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Filter Q", 1),
+                                                         "Filter Q",
+                                                         juce::NormalisableRange<float>(0.707f, 10.f, 0.01f, 0.5f),
+                                                         0.707f));
+  layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("Type", 1),
+                                                          "Type",
                                                           juce::StringArray { "Soft Clip", "Hard Clip" },
                                                           0));
-  layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Distortion Mix", 1),
-                                                         "Distortion Mix",
-                                                         juce::NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
-                                                         0.f));
-  layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Distortion Drive", 1),
-                                                         "Distortion Drive",
+  layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Drive", 1),
+                                                         "Drive",
                                                          juce::NormalisableRange<float>(1.f, 12.f, 0.01f, 0.5f),
                                                          1.f));
+  layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Mix", 1),
+                                                         "Mix",
+                                                         juce::NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
+                                                         0.f));
 
   return layout;
 }
