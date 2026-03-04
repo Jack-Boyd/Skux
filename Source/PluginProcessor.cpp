@@ -38,29 +38,29 @@ const juce::String SkuxAudioProcessor::getName() const
 
 bool SkuxAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
-    return true;
-   #else
-    return false;
-   #endif
+#if JucePlugin_WantsMidiInput
+  return true;
+#else
+  return false;
+#endif
 }
 
 bool SkuxAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
-    return true;
-   #else
-    return false;
-   #endif
+#if JucePlugin_ProducesMidiOutput
+  return true;
+#else
+  return false;
+#endif
 }
 
 bool SkuxAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
-    return true;
-   #else
-    return false;
-   #endif
+#if JucePlugin_IsMidiEffect
+  return true;
+#else
+  return false;
+#endif
 }
 
 double SkuxAudioProcessor::getTailLengthSeconds() const
@@ -106,26 +106,25 @@ void SkuxAudioProcessor::releaseResources()
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool SkuxAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
-    return true;
-  #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
+#if JucePlugin_IsMidiEffect
+  juce::ignoreUnused (layouts);
+  return true;
+#else
+  // This is the place where you check if the layout is supported.
+  // In this template code we only support mono or stereo.
+  // Some plugin hosts, such as certain GarageBand versions, will only
+  // load plugins that support stereo bus layouts.
+  if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
+      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+    return false;
 
-    // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
-    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
-        return false;
-   #endif
-
-    return true;
-  #endif
+  // This checks if the input layout matches the output layout
+#if ! JucePlugin_IsSynth
+  if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+    return false;
+#endif
+  return true;
+#endif
 }
 #endif
 
@@ -149,10 +148,14 @@ void SkuxAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
   if (distFilterRouting == 2)
     m_filterProcessor.process(buffer, distFilterCutoff, distFilterQ, distMix);
-
+  
   for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i) {
-      buffer.clear(i, 0, buffer.getNumSamples());
+    buffer.clear(i, 0, buffer.getNumSamples());
   }
+  
+  m_scopeQueue.push(
+    buffer.getReadPointer(0),
+    static_cast<size_t>(buffer.getNumSamples()));
 }
 
 bool SkuxAudioProcessor::hasEditor() const
@@ -162,8 +165,8 @@ bool SkuxAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* SkuxAudioProcessor::createEditor()
 {
-//  return new SkuxAudioProcessorEditor (*this);
-  return new juce::GenericAudioProcessorEditor(*this);
+  return new SkuxAudioProcessorEditor (*this);
+//  return new juce::GenericAudioProcessorEditor(*this);
 }
 
 void SkuxAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
@@ -182,7 +185,7 @@ void SkuxAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new SkuxAudioProcessor();
+  return new SkuxAudioProcessor();
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SkuxAudioProcessor::createParameterLayout()
