@@ -16,10 +16,9 @@ public:
         fifo.prepareToWrite(1, start1, size1, start2, size2);
 
         if (size1 > 0) {
-          std::copy(
-            currentBlock.begin(),
-            currentBlock.end(),
-            blocks[static_cast<size_t>(start1)].begin());
+          std::copy(currentBlock.begin(),
+                    currentBlock.end(),
+                    blocks[static_cast<size_t>(start1)].begin());
         }
 
         fifo.finishedWrite(size1 + size2);
@@ -39,10 +38,9 @@ public:
       fifo.prepareToRead(1, start1, size1, start2, size2);
 
       if (size1 > 0) {
-        std::copy(
-          blocks[static_cast<size_t>(start1)].begin(),
-          blocks[static_cast<size_t>(start1)].end(),
-          outBlock.begin());
+        std::copy(blocks[static_cast<size_t>(start1)].begin(),
+                  blocks[static_cast<size_t>(start1)].end(),
+                  outBlock.begin());
         hasNewData = true;
       }
 

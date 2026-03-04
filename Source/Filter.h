@@ -5,8 +5,7 @@ class Filter
 {
 public:
   void prepare(const juce::dsp::ProcessSpec& spec);
-  void process(juce::AudioBuffer<float>& buffer, float cutoff, float q,
-               float mix);
+  void process(juce::AudioBuffer<float>& buffer, float cutoff, float q, float mix);
   void reset();
 
 private:

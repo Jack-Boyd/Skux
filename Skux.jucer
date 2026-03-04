@@ -5,11 +5,24 @@
               cppLanguageStandard="20">
   <MAINGROUP id="CFMcdA" name="Skux">
     <GROUP id="{20CF9524-ACCA-0C41-083F-1B74784D86CF}" name="Source">
-      <FILE id="BxrNgb" name="Oscilloscope.h" compile="0" resource="0" file="Source/Oscilloscope.h"/>
+      <GROUP id="{8B9B48FD-5CC1-6DF5-0112-764BC58F4256}" name="GUI">
+        <FILE id="S6or6P" name="LabeledComboBox.cpp" compile="1" resource="0"
+              file="Source/LabeledComboBox.cpp"/>
+        <FILE id="zV9LX7" name="LabeledComboBox.h" compile="0" resource="0"
+              file="Source/LabeledComboBox.h"/>
+        <FILE id="uvO39k" name="LabeledKnob.cpp" compile="1" resource="0" file="Source/LabeledKnob.cpp"/>
+        <FILE id="LgQs6d" name="LabeledKnob.h" compile="0" resource="0" file="Source/LabeledKnob.h"/>
+        <FILE id="Ql4Uft" name="LookAndFeel.cpp" compile="1" resource="0" file="Source/LookAndFeel.cpp"/>
+        <FILE id="QaKchw" name="LookAndFeel.h" compile="0" resource="0" file="Source/LookAndFeel.h"/>
+      </GROUP>
+      <GROUP id="{A16540FB-D2CB-2310-0B97-E3DDBAA7EB62}" name="Resources">
+        <FILE id="kqAY5m" name="Lato-Medium.ttf" compile="0" resource="1" file="../JX11/Resources/Lato-Medium.ttf"/>
+      </GROUP>
       <FILE id="IHZ8xT" name="Distortion.cpp" compile="1" resource="0" file="Source/Distortion.cpp"/>
       <FILE id="QM7haO" name="Distortion.h" compile="0" resource="0" file="Source/Distortion.h"/>
       <FILE id="uSctI8" name="Filter.cpp" compile="1" resource="0" file="Source/Filter.cpp"/>
       <FILE id="nW9rV3" name="Filter.h" compile="0" resource="0" file="Source/Filter.h"/>
+      <FILE id="BxrNgb" name="Oscilloscope.h" compile="0" resource="0" file="Source/Oscilloscope.h"/>
       <FILE id="uJ8Ggb" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="IvA8oK" name="PluginProcessor.h" compile="0" resource="0"
