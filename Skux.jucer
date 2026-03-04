@@ -5,6 +5,7 @@
               cppLanguageStandard="20">
   <MAINGROUP id="CFMcdA" name="Skux">
     <GROUP id="{20CF9524-ACCA-0C41-083F-1B74784D86CF}" name="Source">
+      <FILE id="BxrNgb" name="Oscilloscope.h" compile="0" resource="0" file="Source/Oscilloscope.h"/>
       <FILE id="IHZ8xT" name="Distortion.cpp" compile="1" resource="0" file="Source/Distortion.cpp"/>
       <FILE id="QM7haO" name="Distortion.h" compile="0" resource="0" file="Source/Distortion.h"/>
       <FILE id="uSctI8" name="Filter.cpp" compile="1" resource="0" file="Source/Filter.cpp"/>
@@ -16,6 +17,8 @@
       <FILE id="fOYdoY" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="MbogtJ" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <FILE id="w3S5Ok" name="ScopeDataQueue.h" compile="0" resource="0"
+            file="Source/ScopeDataQueue.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>
